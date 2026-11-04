@@ -4,7 +4,10 @@ import android.content.Context
 import android.content.SharedPreferences
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.Json
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Persistent settings, backed by SharedPreferences.
@@ -21,6 +24,25 @@ class FxSettings(context: Context) {
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
+    private val _version = MutableStateFlow(0)
+    /** Bumped on every change, so the UI can re-read after e.g. a per-device switch. */
+    val version: StateFlow<Int> = _version
+
+    private val listeners = CopyOnWriteArrayList<() -> Unit>()
+
+    // Held strongly: SharedPreferences only keeps a weak reference.
+    private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        _version.value++
+        listeners.forEach { runCatching(it) }
+    }
+
+    init {
+        prefs.registerOnSharedPreferenceChangeListener(prefListener)
+    }
+
+    fun addListener(l: () -> Unit) { listeners += l }
+    fun removeListener(l: () -> Unit) { listeners -= l }
+
     var enabled: Boolean
         get() = prefs.getBoolean("fx.enabled", false)
         set(v) = prefs.edit().putBoolean("fx.enabled", v).apply()
@@ -28,6 +50,11 @@ class FxSettings(context: Context) {
     var catchAll: Boolean
         get() = prefs.getBoolean("fx.catchAll", false)
         set(v) = prefs.edit().putBoolean("fx.catchAll", v).apply()
+
+    /** Output limiter (Stage 2 key; not in the original FX file). */
+    var limiterOn: Boolean
+        get() = prefs.getBoolean("fx.limiter", true)
+        set(v) = prefs.edit().putBoolean("fx.limiter", v).apply()
 
     var eqOn: Boolean
         get() = prefs.getBoolean("eq.on", false)

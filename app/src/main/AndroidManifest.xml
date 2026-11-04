@@ -29,6 +29,25 @@
             </intent-filter>
         </activity>
 
+        <!-- Audio engine: keeps effects attached while Sonora FX is on. -->
+        <service
+            android:name=".engine.FxService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Applies the user's equalizer and audio effects to other apps' playback" />
+        </service>
+
+        <receiver
+            android:name=".engine.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Shizuku entry point. -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"

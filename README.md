@@ -46,6 +46,13 @@ app/src/main/java/com/sonora/fx/
   settings/FxSettings.kt    SharedPreferences store (same keys as original FX)
   perdevice/PerDeviceEq.kt  separate EQ per output device
   shizuku/ShizukuGrant.kt   one-tap DUMP grant via Shizuku
+  engine/FxEngine.kt        audio engine: tracks sessions, applies settings
+  engine/SessionFx.kt       DynamicsProcessing chain per session (EQ, preamp, limiter)
+  engine/EqCurve.kt         parametric bands + tone shelves -> 32-band graphic EQ gains
+  engine/SessionScanner.kt  Catch Every App: finds sessions via the DUMP permission
+  engine/FxService.kt       foreground service + session-broadcast receiver
+  engine/BootReceiver.kt    restarts the engine after reboot/update
+  ui/EffectsScreen.kt       basic engine controls (full UI is Stage 3)
   ui/CatchAllScreen.kt      Catch Every App setup screen
   ui/Theme.kt
 ```
