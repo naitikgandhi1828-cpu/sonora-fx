@@ -29,6 +29,8 @@ original with the same signing key.
   model and settings, **separate EQ per device**, and a friendly **Catch Every
   App** screen with one-tap **Shizuku** grant and a short manual fallback.
   Goal: it compiles, installs, and the catch-all setup is painless.
+  Everything is done on the phone: Shizuku is started with Wireless
+  debugging (Android 11+), so no PC is ever needed.
 - **Stage 2:** port the audio engine — the background service that attaches
   effects to other apps' sessions, and the EQ/preamp/tone/limiter application.
 - **Stage 3:** reverb and spatial, then the full Compose UI (home, EQ screen
@@ -52,9 +54,14 @@ app/src/main/java/com/sonora/fx/
   engine/SessionScanner.kt  Catch Every App: finds sessions via the DUMP permission
   engine/FxService.kt       foreground service + session-broadcast receiver
   engine/BootReceiver.kt    restarts the engine after reboot/update
-  ui/EffectsScreen.kt       basic engine controls (full UI is Stage 3)
-  ui/CatchAllScreen.kt      Catch Every App setup screen
-  ui/Theme.kt
+  diag/Log.kt               in-app log (Activity log screen; no PC/logcat needed)
+  ui/Theme.kt               Sonora palette (always dark, orange accent)
+  ui/Components.kt          cards, rows, sliders, vertical EQ faders
+  ui/HomeScreen.kt          power card, Apps / Effects / More apps / How it works
+  ui/EqualiserScreen.kt     curve, 10 faders, Tone, Pre-amp, auto pre-amp, limiter
+  ui/CatchAllScreen.kt      Catch every app: on-phone Shizuku setup (no PC)
+  ui/KeepRunningScreen.kt   battery saver / autostart help
+  ui/LogScreen.kt           view, share and copy the log
 ```
 
 The signing key in `keystore/` is the same one the original FX used, kept in

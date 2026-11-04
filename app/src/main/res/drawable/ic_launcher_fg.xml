@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- ring, open at the lower right like a sound wave leaving it -->
+    <path
+        android:pathData="M78,68.4 A28,28 0 1,1 82,54"
+        android:strokeColor="#FF874B"
+        android:strokeWidth="4.8"
+        android:strokeLineCap="round" />
+    <!-- equaliser bars -->
+    <path
+        android:pathData="M40,49.3 L40,58.7 M47,42.3 L47,65.7 M54,35.3 L54,72.7 M61,43.5 L61,64.5 M68,49.3 L68,58.7"
+        android:strokeColor="#FF874B"
+        android:strokeWidth="4.8"
+        android:strokeLineCap="round" />
+</vector>

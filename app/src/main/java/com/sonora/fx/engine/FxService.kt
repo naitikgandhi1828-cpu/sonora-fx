@@ -80,7 +80,7 @@ class FxService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         return NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setSmallIcon(com.sonora.fx.R.drawable.ic_stat_fx)
             .setContentTitle("Sonora FX is on")
             .setContentText("Effects are applied to your music")
             .setContentIntent(open)

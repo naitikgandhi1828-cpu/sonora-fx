@@ -17,8 +17,8 @@ android {
         applicationId = "com.sonora.fx.dev"
         minSdk = 29
         targetSdk = 34
-        versionCode = 2
-        versionName = "2.0-dev2"
+        versionCode = 3
+        versionName = "2.0-dev3"
     }
 
     // Same key as the original FX, kept in the repo so Google sign-in and

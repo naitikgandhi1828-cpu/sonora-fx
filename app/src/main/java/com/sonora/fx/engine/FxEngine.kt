@@ -202,16 +202,19 @@ object FxEngine {
     private fun params(): EngineParams {
         val s = FxApplication.settings
         val eqOn = s.eqOn
-        val gains = EqCurve.gains(
-            bands = if (eqOn) s.eqBands else null,
-            bassDb = s.bassDB, bassHz = s.bassFrequency,
-            trebleDb = s.trebleDB, trebleHz = s.trebleFrequency,
-        )
+        // As in Sonora FX, the tone shelves ride on the equaliser (on with it).
+        val gains = if (eqOn) {
+            EqCurve.gains(s.eqBands, s.bassDB, s.bassFrequency, s.trebleDB, s.trebleFrequency)
+        } else {
+            FloatArray(EqCurve.BANDS)
+        }
+        val boost = gains.maxOrNull()?.coerceAtLeast(0f) ?: 0f
+        val input = if (eqOn) s.eqPreampDB.toFloat() - (if (s.autoPreamp) boost else 0f) else 0f
         return EngineParams(
             active = s.enabled,
             eqGains = gains,
-            eqInUse = gains.any { it != 0f },
-            inputGainDb = if (eqOn) s.eqPreampDB.toFloat() else 0f,
+            eqInUse = eqOn && gains.any { it != 0f },
+            inputGainDb = input,
             limiter = s.limiterOn,
         )
     }

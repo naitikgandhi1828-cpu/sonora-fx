@@ -56,6 +56,11 @@ class FxSettings(context: Context) {
         get() = prefs.getBoolean("fx.limiter", true)
         set(v) = prefs.edit().putBoolean("fx.limiter", v).apply()
 
+    /** Lower the input by the curve's biggest boost so the EQ can't clip. */
+    var autoPreamp: Boolean
+        get() = prefs.getBoolean("eq.autoPreamp", true)
+        set(v) = prefs.edit().putBoolean("eq.autoPreamp", v).apply()
+
     var eqOn: Boolean
         get() = prefs.getBoolean("eq.on", false)
         set(v) = prefs.edit().putBoolean("eq.on", v).apply()
