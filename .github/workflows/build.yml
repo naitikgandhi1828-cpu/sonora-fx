@@ -1,0 +1,75 @@
+# Builds Sonora FX from source and publishes the APK.
+#
+# Push to main (or run manually). The signed APK lands on the `builds` branch
+# as SonoraFX.apk; if the build fails, build-log.txt lands there instead so the
+# errors can be read without opening the Actions UI.
+
+name: Build Sonora FX
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+concurrency:
+  group: build-fx
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
+
+      - name: Install Android SDK pieces
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-35" "build-tools;35.0.0" > /dev/null || true
+
+      - name: Build the APK
+        id: build
+        run: |
+          set -o pipefail
+          gradle --no-daemon --stacktrace :app:assembleRelease 2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      - name: Collect the result
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/out"
+          APK="app/build/outputs/apk/release/app-release.apk"
+          if [ -f "$APK" ]; then
+            cp "$APK" "$RUNNER_TEMP/out/SonoraFX.apk"
+            ls -lh "$RUNNER_TEMP/out/SonoraFX.apk"
+          fi
+          if [ -f "$RUNNER_TEMP/build.log" ]; then
+            { echo "=== errors ==="; grep -E "^e: |error:|FAILED|What went wrong" -A3 "$RUNNER_TEMP/build.log" | head -400;
+              echo; echo "=== last lines ==="; tail -150 "$RUNNER_TEMP/build.log"; } > "$RUNNER_TEMP/out/build-log.txt" || true
+          fi
+
+      - name: Publish to the builds branch
+        if: always()
+        run: |
+          set -e
+          cd "$RUNNER_TEMP/out"
+          ls -la
+          git init -q -b builds
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Build from ${GITHUB_SHA::7} (run ${GITHUB_RUN_NUMBER})" || { echo "nothing to publish"; exit 0; }
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" HEAD:builds
