@@ -4,12 +4,12 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
-import android.util.Log
+import com.sonora.fx.diag.Log
 import java.io.File
 
 /**
  * "Catch Every App": finds the audio sessions of everything playing, using
- * the DUMP permission (granted once via Shizuku or adb).
+ * the DUMP permission (granted once via Shizuku, on the phone).
  *
  * Reads the audio service's dump, whose "playback activity" section lists
  * one AudioPlaybackConfiguration per player with its uid, state and session
@@ -24,12 +24,16 @@ object SessionScanner {
     private val reUid = Regex("""u/pid:(\d+)/""")
     private val reState = Regex("""\bstate:(\w+)""")
 
+    private var usedProcess = false
+
     fun dumpGranted(ctx: Context): Boolean =
         ctx.checkSelfPermission("android.permission.DUMP") == PackageManager.PERMISSION_GRANTED
 
     /** Active session ids of other apps' players. */
     fun scan(ctx: Context): Result<Set<Int>> = runCatching {
-        val text = dumpViaBinder(ctx) ?: dumpViaProcess()
+        val text = dumpViaBinder(ctx) ?: dumpViaProcess().also {
+            if (!usedProcess) { Log.i(TAG, "reading sessions via dumpsys"); usedProcess = true }
+        }
         if (text.contains("Permission Denial")) error("DUMP permission denied")
         parse(text, ctx.applicationInfo.uid)
     }

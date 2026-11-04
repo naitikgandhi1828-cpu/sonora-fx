@@ -12,7 +12,7 @@ import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.media.audiofx.AudioEffect
 import android.os.IBinder
-import android.util.Log
+import com.sonora.fx.diag.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat

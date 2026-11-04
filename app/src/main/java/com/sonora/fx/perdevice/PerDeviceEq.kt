@@ -7,7 +7,7 @@ import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import com.sonora.fx.diag.Log
 import android.widget.Toast
 import com.sonora.fx.FxApplication
 import com.sonora.fx.settings.EQBand

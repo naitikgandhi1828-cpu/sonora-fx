@@ -1,12 +1,12 @@
 package com.sonora.fx.shizuku
 
 import android.content.pm.PackageManager
-import android.util.Log
+import com.sonora.fx.diag.Log
 import rikka.shizuku.Shizuku
 
 /**
  * One-tap grant of android.permission.DUMP through Shizuku, so "Catch Every
- * App" needs no PC and no adb command.
+ * App" needs no PC.
  *
  * Flow the UI drives:
  *   1. isRunning()        -> is the Shizuku service up?

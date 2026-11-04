@@ -4,7 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
-import android.util.Log
+import com.sonora.fx.diag.Log
 import com.sonora.fx.FxApplication
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,6 +48,7 @@ object FxEngine {
     private val scanned = HashMap<Int, Int>() // session -> consecutive misses
     private val failedAt = HashMap<Int, Long>()
     private var note: String? = null
+    private var lastFound: Set<Int> = emptySet()
 
     private val onSettings: () -> Unit = { scheduleApply() }
     private val applyNow = Runnable { applyAll() }
@@ -61,7 +62,8 @@ object FxEngine {
         FxApplication.settings.addListener(onSettings)
         h?.post(scan)
         publish()
-        Log.i(TAG, "started")
+        Log.i(TAG, "started (Android ${android.os.Build.VERSION.RELEASE}, DUMP " +
+            (if (SessionScanner.dumpGranted(app)) "granted" else "not granted") + ")")
     }
 
     fun stop() {
@@ -74,6 +76,7 @@ object FxEngine {
         handler.post {
             effects.values.forEach { it.release() }
             effects.clear(); announced.clear(); scanned.clear(); failedAt.clear()
+            lastFound = emptySet(); note = null
             _status.value = Status()
             t?.quitSafely()
         }
@@ -130,11 +133,17 @@ object FxEngine {
             return
         }
         val found = SessionScanner.scan(app).getOrElse {
-            note = "Couldn't read audio sessions: ${it.message}"
+            val n = "Couldn't read audio sessions: ${it.message}"
+            if (n != note) Log.w(TAG, n, it)
+            note = n
             publish()
             return
         }
         note = null
+        if (found != lastFound) {
+            Log.i(TAG, "playing sessions: ${if (found.isEmpty()) "none" else found.sorted().joinToString()}")
+            lastFound = found
+        }
         for (id in found) {
             scanned[id] = 0
             attach(id)
