@@ -14,6 +14,8 @@ import com.sonora.fx.settings.EQBand
 import com.sonora.fx.settings.EQPreset
 import com.sonora.fx.settings.FxSettings
 import kotlinx.serialization.decodeFromString
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.Json
 
 /**
@@ -39,6 +41,10 @@ object PerDeviceEq {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     private val check = Runnable { check() }
+
+    private val _label = MutableStateFlow("Phone Speaker")
+    /** Name of the output the EQ currently belongs to. */
+    val label: StateFlow<String> = _label
 
     fun start(context: Context) {
         try {
@@ -67,10 +73,16 @@ object PerDeviceEq {
     private fun check() {
         try {
             val (key, label) = currentDevice()
+            _label.value = label
             val last = pd.getString(LAST, null)
             if (key == last) return
 
             val s = FxApplication.settings
+            if (!s.perDeviceEq) {
+                // One shared EQ: just remember where we are, swap nothing.
+                pd.edit().putString(LAST, key).apply()
+                return
+            }
             if (last != null) save(s, last)
             val loaded = load(s, key)
             pd.edit().putString(LAST, key).apply()
@@ -155,6 +167,6 @@ object PerDeviceEq {
                     aid = "aid:$name" to name.ifEmpty { "Hearing aid" }
             }
         }
-        return bt ?: aid ?: usb ?: wired ?: ("speaker" to "Phone speaker")
+        return bt ?: aid ?: usb ?: wired ?: ("speaker" to "Phone Speaker")
     }
 }

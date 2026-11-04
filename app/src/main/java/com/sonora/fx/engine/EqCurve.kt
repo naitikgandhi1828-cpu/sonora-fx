@@ -148,14 +148,25 @@ object EqCurve {
         bands: List<EQBand>?,
         bassDb: Double, bassHz: Double,
         trebleDb: Double, trebleHz: Double,
+    ): FloatArray = response(bands, bassDb, bassHz, trebleDb, trebleHz, centres)
+
+    /** Combined response in dB at any [freqs] (for drawing the curve). */
+    fun response(
+        bands: List<EQBand>?,
+        bassDb: Double, bassHz: Double,
+        trebleDb: Double, trebleHz: Double,
+        freqs: DoubleArray,
     ): FloatArray {
         val stages = ArrayList<Biquad>()
         bands?.forEach { b -> stage(b)?.let(stages::add) }
         if (bassDb != 0.0) stages += lowShelf(bassHz, bassDb)
         if (trebleDb != 0.0) stages += highShelf(trebleHz, trebleDb)
-        return FloatArray(BANDS) { i ->
-            val f = centres[i]
+        return FloatArray(freqs.size) { i ->
+            val f = freqs[i]
             stages.sumOf { it.magnitudeDb(f) }.toFloat().coerceIn(MIN_DB, MAX_DB)
         }
     }
+
+    /** The pre-amp cut auto pre-amp applies for these gains (<= 0). */
+    fun autoCut(gains: FloatArray): Float = -(gains.maxOrNull()?.coerceAtLeast(0f) ?: 0f)
 }

@@ -297,7 +297,7 @@ fun VerticalEq(
         gains.forEachIndexed { i, g ->
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    if (g == 0f) "0" else String.format(Locale.US, "%+.1f", g),
+                    if (g % 1f == 0f) String.format(Locale.US, "%+d", g.toInt()) else String.format(Locale.US, "%+.1f", g),
                     color = if (active && g != 0f) Sx.Accent else Sx.Sub,
                     fontSize = 11.sp, fontFamily = FontFamily.Monospace,
                 )
@@ -347,15 +347,9 @@ private fun Fader(gain: Float, range: Float, active: Boolean, onGain: (Float) ->
         drawLine(Sx.Divider, Offset(cx, top), Offset(cx, bottom), strokeWidth = w, cap = StrokeCap.Round)
         drawLine(Sx.Track, Offset(cx - 6.dp.toPx(), mid), Offset(cx + 6.dp.toPx(), mid), strokeWidth = 1.dp.toPx())
         if (gain != 0f) {
-            drawLine(if (active) Sx.Accent else Sx.Thumb, Offset(cx, mid), Offset(cx, y), strokeWidth = w, cap = StrokeCap.Round)
+            drawLine(if (active) Sx.Accent else Sx.Thumb, Offset(cx, mid), Offset(cx, y), strokeWidth = w)
         }
-        val tw = 22.dp.toPx(); val th = 12.dp.toPx()
-        drawRoundRect(
-            if (active) Color.White else Sx.Thumb,
-            topLeft = Offset(cx - tw / 2, y - th / 2),
-            size = Size(tw, th),
-            cornerRadius = CornerRadius(th / 2, th / 2),
-        )
+        drawCircle(if (active) Sx.Accent else Sx.Thumb, 11.dp.toPx(), Offset(cx, y))
     }
 }
 

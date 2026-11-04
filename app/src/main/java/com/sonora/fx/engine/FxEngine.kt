@@ -208,14 +208,15 @@ object FxEngine {
         } else {
             FloatArray(EqCurve.BANDS)
         }
-        val boost = gains.maxOrNull()?.coerceAtLeast(0f) ?: 0f
-        val input = if (eqOn) s.eqPreampDB.toFloat() - (if (s.autoPreamp) boost else 0f) else 0f
+        val input = if (eqOn) s.eqPreampDB.toFloat() + (if (s.autoPreamp) EqCurve.autoCut(gains) else 0f) else 0f
         return EngineParams(
             active = s.enabled,
             eqGains = gains,
             eqInUse = eqOn && gains.any { it != 0f },
             inputGainDb = input,
             limiter = s.limiterOn,
+            ceilingDb = s.limiterCeilingDB.toFloat(),
+            releaseMs = s.limiterReleaseMs.toFloat(),
         )
     }
 

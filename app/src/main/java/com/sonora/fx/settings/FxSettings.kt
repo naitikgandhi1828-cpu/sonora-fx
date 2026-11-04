@@ -56,6 +56,39 @@ class FxSettings(context: Context) {
         get() = prefs.getBoolean("fx.limiter", true)
         set(v) = prefs.edit().putBoolean("fx.limiter", v).apply()
 
+    /** Separate EQ per output device (speaker, wired, each Bluetooth device). */
+    var perDeviceEq: Boolean
+        get() = prefs.getBoolean("eq.perDevice", true)
+        set(v) = prefs.edit().putBoolean("eq.perDevice", v).apply()
+
+    /** Limiter ceiling in dBFS (-6 … 0). */
+    var limiterCeilingDB: Double
+        get() = dbl("fx.limiterCeiling", -0.5, -6.0, 0.0)
+        set(v) = putDbl("fx.limiterCeiling", v)
+
+    /** Limiter release in ms (10 … 1000). */
+    var limiterReleaseMs: Double
+        get() = dbl("fx.limiterRelease", 120.0, 10.0, 1000.0)
+        set(v) = putDbl("fx.limiterRelease", v)
+
+    /** Presets the user saved, as JSON under "eq.userPresets". */
+    var userPresets: List<EQPreset>
+        get() {
+            val raw = prefs.getString("eq.userPresets", null) ?: return emptyList()
+            return try {
+                json.decodeFromString<List<EQPreset>>(raw).filter { validBands(it.bands) }
+            } catch (t: Throwable) {
+                emptyList()
+            }
+        }
+        set(v) = prefs.edit().putString("eq.userPresets", json.encodeToString(v)).apply()
+
+    /** Loads [p]'s bands and name. */
+    fun applyPreset(p: EQPreset) {
+        eqBands = p.bands.map { it.copy() }
+        eqPresetName = p.name
+    }
+
     /** Lower the input by the curve's biggest boost so the EQ can't clip. */
     var autoPreamp: Boolean
         get() = prefs.getBoolean("eq.autoPreamp", true)

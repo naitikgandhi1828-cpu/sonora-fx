@@ -9,6 +9,8 @@ data class EngineParams(
     val eqInUse: Boolean,
     val inputGainDb: Float,
     val limiter: Boolean,
+    val ceilingDb: Float = -0.5f,
+    val releaseMs: Float = 120f,
 )
 
 /**
@@ -45,9 +47,9 @@ class SessionFx(val session: Int) {
                 /* enabled = */ p.active && p.limiter,
                 /* linkGroup = */ 0,
                 /* attackTime ms = */ 1f,
-                /* releaseTime ms = */ 60f,
-                /* ratio = */ 10f,
-                /* threshold dB = */ -1f,
+                /* releaseTime ms = */ p.releaseMs,
+                /* ratio = */ 20f,
+                /* threshold dB = */ p.ceilingDb,
                 /* postGain dB = */ 0f,
             )
         )
