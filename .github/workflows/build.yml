@@ -72,4 +72,12 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -q -m "Build from ${GITHUB_SHA::7} (run ${GITHUB_RUN_NUMBER})" || { echo "nothing to publish"; exit 0; }
-          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" HEAD:builds
+          # GitHub sometimes rejects a push with a transient server error
+          # ("fatal error in commit_refs"); retry with backoff.
+          for wait in 5 10 20 40 0; do
+            if git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" HEAD:builds; then
+              exit 0
+            fi
+            [ "$wait" -gt 0 ] && { echo "push failed, retrying in ${wait}s"; sleep "$wait"; }
+          done
+          echo "could not publish to builds"; exit 1
