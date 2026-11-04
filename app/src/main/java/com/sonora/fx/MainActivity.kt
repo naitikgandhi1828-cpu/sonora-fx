@@ -20,6 +20,8 @@ import com.sonora.fx.ui.EqualiserScreen
 import com.sonora.fx.ui.HomeScreen
 import com.sonora.fx.ui.KeepRunningScreen
 import com.sonora.fx.ui.LogScreen
+import com.sonora.fx.ui.ReverbScreen
+import com.sonora.fx.ui.SpatialScreen
 import com.sonora.fx.ui.SonoraFxTheme
 import rikka.shizuku.Shizuku
 
@@ -58,6 +60,8 @@ class MainActivity : ComponentActivity() {
                 BackHandler(enabled = route != "home") { back() }
                 when (route) {
                     "eq" -> EqualiserScreen(onBack = back)
+                    "reverb" -> ReverbScreen(onBack = back)
+                    "spatial" -> SpatialScreen(onBack = back)
                     "catch" -> CatchAllScreen(refreshKey = tick, onRefresh = { tick++ }, onBack = back)
                     "keep" -> KeepRunningScreen(refreshKey = tick, onBack = back)
                     "log" -> LogScreen(onBack = back)

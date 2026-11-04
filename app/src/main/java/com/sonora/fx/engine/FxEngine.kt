@@ -209,6 +209,37 @@ object FxEngine {
             FloatArray(EqCurve.BANDS)
         }
         val input = if (eqOn) s.eqPreampDB.toFloat() + (if (s.autoPreamp) EqCurve.autoCut(gains) else 0f) else 0f
+        // Stereo Field balance: turn the far side down.
+        val b = s.balance
+        val balL = if (b > 0) db(1 - b) else 0f
+        val balR = if (b < 0) db(1 + b) else 0f
+
+        // Reverb + Spatial.
+        val rvOn = s.reverbOn
+        val spec = if (rvOn) reverbSpec(s) else null
+        val spOn = s.spatialOn
+        val depth = if (spOn) s.spatialDepth else 0.0
+        var env: android.media.audiofx.EnvironmentalReverb.Settings? = null
+        var preset: Short? = null
+        if (spec != null && !spec.classic) {
+            // Room Depth adds to the room's own early reflections.
+            env = ReverbModel.settings(spec.copy(earlyPct = (spec.earlyPct + depth * 0.5).coerceAtMost(100.0)))
+        } else {
+            if (spec != null) preset = spec.room.classic
+            if (depth > 0) env = ReverbModel.depthOnly(depth)
+        }
+
+        // Bass Distance, scaled by how big the room is.
+        val bassAmt = if (spec != null) (s.reverbBassDistance / 100.0) * spec.room.bassScale else 0.0
+
+        val mode = s.spatialMode
+        val virtScale = when (mode) { "subtle" -> 0.5; "hall" -> 0.8; else -> 1.0 }
+        val virtMode = when (mode) {
+            "headphones", "hall" -> android.media.audiofx.Virtualizer.VIRTUALIZATION_MODE_BINAURAL
+            "wide" -> android.media.audiofx.Virtualizer.VIRTUALIZATION_MODE_TRANSAURAL
+            else -> android.media.audiofx.Virtualizer.VIRTUALIZATION_MODE_AUTO
+        }
+
         return EngineParams(
             active = s.enabled,
             eqGains = gains,
@@ -217,8 +248,33 @@ object FxEngine {
             limiter = s.limiterOn,
             ceilingDb = s.limiterCeilingDB.toFloat(),
             releaseMs = s.limiterReleaseMs.toFloat(),
+            balanceL = balL,
+            balanceR = balR,
+            bassGainDb = (-4.0 * bassAmt).toFloat(),
+            bassRatio = (1.0 + 2.0 * bassAmt).toFloat(),
+            envReverb = env,
+            presetReverb = preset,
+            virtStrength = if (spOn) (s.spatialAmount * 10 * virtScale).toInt().coerceIn(0, 1000).toShort() else null,
+            virtMode = virtMode,
         )
     }
+
+    private fun db(lin: Double): Float =
+        if (lin <= 0.001) -60f else (20 * kotlin.math.log10(lin)).toFloat()
+
+    fun reverbSpec(s: com.sonora.fx.settings.FxSettings) = ReverbSpec(
+        classic = s.reverbEngine == "classic",
+        room = Rooms.byId(s.reverbRoom),
+        mixDb = s.reverbMixDB,
+        decayS = s.reverbDecayS,
+        sizePct = s.reverbSize,
+        preDelayMs = s.reverbPreDelayMs,
+        clarityPct = s.reverbClarity,
+        trebleDecay = s.reverbTrebleDecay,
+        highCutHz = s.reverbHighCutHz,
+        diffusionPct = s.reverbDiffusion,
+        earlyPct = s.reverbEarly,
+    )
 
     private fun publish() {
         val s = FxApplication.settings

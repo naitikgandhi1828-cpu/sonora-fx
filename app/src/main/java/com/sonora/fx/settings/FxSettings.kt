@@ -89,6 +89,89 @@ class FxSettings(context: Context) {
         eqPresetName = p.name
     }
 
+    // --- Reverb ------------------------------------------------------------
+
+    var reverbOn: Boolean
+        get() = prefs.getBoolean("rv.on", false)
+        set(v) = prefs.edit().putBoolean("rv.on", v).apply()
+
+    /** "studio" (EnvironmentalReverb, every control) or "classic" (PresetReverb). */
+    var reverbEngine: String
+        get() = prefs.getString("rv.engine", "studio") ?: "studio"
+        set(v) = prefs.edit().putString("rv.engine", v).apply()
+
+    var reverbRoom: String
+        get() = prefs.getString("rv.room", "chamber") ?: "chamber"
+        set(v) = prefs.edit().putString("rv.room", v).apply()
+
+    var reverbMixDB: Double
+        get() = dbl("rv.mix", -10.0, -30.0, 0.0)
+        set(v) = putDbl("rv.mix", v)
+    var reverbDecayS: Double
+        get() = dbl("rv.decay", 1.9, 0.2, 20.0)
+        set(v) = putDbl("rv.decay", v)
+    var reverbSize: Double
+        get() = dbl("rv.size", 55.0, 0.0, 100.0)
+        set(v) = putDbl("rv.size", v)
+    var reverbPreDelayMs: Double
+        get() = dbl("rv.predelay", 26.0, 0.0, 300.0)
+        set(v) = putDbl("rv.predelay", v)
+    var reverbClarity: Double
+        get() = dbl("rv.clarity", 60.0, 0.0, 100.0)
+        set(v) = putDbl("rv.clarity", v)
+    var reverbBassDistance: Double
+        get() = dbl("rv.bassDistance", 60.0, 0.0, 100.0)
+        set(v) = putDbl("rv.bassDistance", v)
+    var reverbTrebleDecay: Double
+        get() = dbl("rv.trebleDecay", 0.7, 0.1, 2.0)
+        set(v) = putDbl("rv.trebleDecay", v)
+    var reverbHighCutHz: Double
+        get() = dbl("rv.highCut", 10000.0, 1000.0, 20000.0)
+        set(v) = putDbl("rv.highCut", v)
+    var reverbDiffusion: Double
+        get() = dbl("rv.diffusion", 85.0, 0.0, 100.0)
+        set(v) = putDbl("rv.diffusion", v)
+    var reverbEarly: Double
+        get() = dbl("rv.early", 40.0, 0.0, 100.0)
+        set(v) = putDbl("rv.early", v)
+
+    /** Picks a room and loads its shape into the controls (Mix, Clarity and Bass Distance stay). */
+    fun loadRoom(r: com.sonora.fx.engine.Room) {
+        prefs.edit()
+            .putString("rv.room", r.id)
+            .putString("rv.decay", r.decayS.toString())
+            .putString("rv.size", r.sizePct.toString())
+            .putString("rv.predelay", r.preDelayMs.toString())
+            .putString("rv.trebleDecay", r.trebleDecay.toString())
+            .putString("rv.highCut", r.highCutHz.toString())
+            .putString("rv.diffusion", r.diffusionPct.toString())
+            .putString("rv.early", r.earlyPct.toString())
+            .apply()
+    }
+
+    // --- Spatial & stereo --------------------------------------------------
+
+    var spatialOn: Boolean
+        get() = prefs.getBoolean("sp.on", false)
+        set(v) = prefs.edit().putBoolean("sp.on", v).apply()
+
+    /** "subtle", "headphones", "wide" or "hall". */
+    var spatialMode: String
+        get() = prefs.getString("sp.mode", "headphones") ?: "headphones"
+        set(v) = prefs.edit().putString("sp.mode", v).apply()
+
+    var spatialAmount: Double
+        get() = dbl("sp.amount", 55.0, 0.0, 100.0)
+        set(v) = putDbl("sp.amount", v)
+    var spatialDepth: Double
+        get() = dbl("sp.depth", 30.0, 0.0, 100.0)
+        set(v) = putDbl("sp.depth", v)
+
+    /** -1 (left) … 0 (centre) … +1 (right). */
+    var balance: Double
+        get() = dbl("st.balance", 0.0, -1.0, 1.0)
+        set(v) = putDbl("st.balance", v)
+
     /** Lower the input by the curve's biggest boost so the EQ can't clip. */
     var autoPreamp: Boolean
         get() = prefs.getBoolean("eq.autoPreamp", true)

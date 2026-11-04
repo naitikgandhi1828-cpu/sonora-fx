@@ -52,6 +52,10 @@ fun HomeScreen(go: (String) -> Unit) {
     val eqOn = s.eqOn
     val preset = s.eqPresetName
     val catchAll = s.catchAll
+    val rvOn = s.reverbOn
+    val roomName = com.sonora.fx.engine.Rooms.byId(s.reverbRoom).name
+    val spOn = s.spatialOn
+    val spMode = s.spatialMode
     val dump = SessionScanner.dumpGranted(ctx)
     val sessions = status.sessions
 
@@ -87,11 +91,11 @@ fun HomeScreen(go: (String) -> Unit) {
 
         SectionHeader("Effects")
         ListCard {
-            NavRow(Icons.Filled.Layers, "Reverb", value = "Soon", enabled = false) {}
+            NavRow(Icons.Filled.Layers, "Reverb", value = if (rvOn) roomName else "Off") { go("reverb") }
             RowDivider()
             NavRow(Icons.Filled.Tune, "Equaliser", value = if (eqOn) preset else "Off") { go("eq") }
             RowDivider()
-            NavRow(Icons.Filled.Headphones, "Spatial", value = "Soon", enabled = false) {}
+            NavRow(Icons.Filled.Headphones, "Spatial", value = if (spOn) spatialModeName(spMode) else "Off") { go("spatial") }
         }
         Footnote(
             "Changes reach the playing app right away, so you can tune by ear.",
