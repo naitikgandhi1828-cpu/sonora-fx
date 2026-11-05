@@ -61,6 +61,7 @@ fun HomeScreen(go: (String) -> Unit) {
 
     val subtitle = when {
         !on -> "Off. Other apps sound as usual."
+        status.global -> "On. Every app sounds through Sonora FX."
         sessions == 0 -> "On. Play music in any app."
         sessions == 1 -> "On. 1 app sounds through Sonora FX."
         else -> "On. $sessions apps sound through Sonora FX."
@@ -68,6 +69,8 @@ fun HomeScreen(go: (String) -> Unit) {
     val appsText = when {
         !on -> "Switch on to start. Then play music in Spotify, Anghami, YouTube Music…"
         status.note != null -> status.note!!
+        status.global -> "Working on the whole phone: every app" +
+            (if (sessions > 0) ", reverb on $sessions announcing " + (if (sessions == 1) "app." else "apps.") else ".")
         sessions == 0 -> "Waiting for music. Start playing in Spotify, Anghami, YouTube Music…"
         else -> "Working on $sessions playing " + (if (sessions == 1) "app" else "apps") +
             (if (catchAll && dump) ", catching every app." else ".")
@@ -107,11 +110,7 @@ fun HomeScreen(go: (String) -> Unit) {
             NavRow(
                 Icons.Filled.Search, "Catch every app",
                 subtitle = "For YouTube Music and apps that don't announce their sound",
-                value = when {
-                    !dump -> "Set up"
-                    catchAll -> "On"
-                    else -> "Off"
-                },
+                value = if (catchAll) "On" else "Off",
             ) { go("catch") }
         }
 

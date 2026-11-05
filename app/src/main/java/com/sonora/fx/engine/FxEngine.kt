@@ -13,11 +13,15 @@ import kotlinx.coroutines.flow.StateFlow
  * The audio engine. Keeps one [SessionFx] on every session it knows about and
  * pushes the current settings to all of them.
  *
- * Sessions come from two places:
+ * Sessions come from:
  *  - players that announce themselves (ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION),
  *    handled by [FxService]'s receiver;
- *  - "Catch Every App": [SessionScanner] polling the audio dump, when the
- *    DUMP permission is granted and the switch is on.
+ *  - "Catch every app", two ways:
+ *     - whole-phone mode (default, no setup): one effect chain on the output
+ *       mix (session 0), so every app is covered. App sessions then only get
+ *       reverb, which can't run on the output mix.
+ *     - precise mode: [SessionScanner] polling the audio dump, when the DUMP
+ *       permission was granted (Shizuku). Some phones (e.g. Xiaomi) block that.
  *
  * All effect work happens on one background thread.
  */
@@ -33,6 +37,8 @@ object FxEngine {
         val running: Boolean = false,
         val sessions: Int = 0,
         val catchAll: Boolean = false,
+        /** Whole-phone mode: effects on the output mix. */
+        val global: Boolean = false,
         val note: String? = null,
     )
 
@@ -49,6 +55,10 @@ object FxEngine {
     private val failedAt = HashMap<Int, Long>()
     private var note: String? = null
     private var lastFound: Set<Int> = emptySet()
+
+    private var globalFx: SessionFx? = null
+    private var inGlobal = false
+    private var globalFailed = false
 
     private val onSettings: () -> Unit = { scheduleApply() }
     private val applyNow = Runnable { applyAll() }
@@ -75,6 +85,7 @@ object FxEngine {
         handler.removeCallbacksAndMessages(null)
         handler.post {
             effects.values.forEach { it.release() }
+            globalFx?.release(); globalFx = null; inGlobal = false; globalFailed = false
             effects.clear(); announced.clear(); scanned.clear(); failedAt.clear()
             lastFound = emptySet(); note = null
             _status.value = Status()
@@ -122,8 +133,13 @@ object FxEngine {
     private fun scanOnce() {
         val s = FxApplication.settings
         val wanted = s.enabled && s.catchAll
-        if (!wanted || !SessionScanner.dumpGranted(app)) {
-            note = if (wanted) "Catch Every App needs the permission (see its tab)" else null
+        val dump = SessionScanner.dumpGranted(app)
+        if (!wanted) globalFailed = false // try again next time it's switched on
+        setGlobal(wanted && !dump && !globalFailed)
+        if (!wanted || !dump) {
+            note = if (wanted && globalFailed) {
+                "This phone blocks effects on its whole output. Apps that announce their sound still work."
+            } else null
             // Drop sessions that only scanning was keeping.
             scanned.keys.toList().forEach { id ->
                 scanned.remove(id)
@@ -161,12 +177,40 @@ object FxEngine {
         publish()
     }
 
+    /** Switches whole-phone mode on or off and rebuilds app sessions to match. */
+    private fun setGlobal(on: Boolean) {
+        if (on == inGlobal) return
+        if (on) {
+            try {
+                val fx = SessionFx(0, full = true)
+                fx.apply(params())
+                globalFx = fx
+                inGlobal = true
+                Log.i(TAG, "whole-phone mode on (output mix)")
+            } catch (t: Throwable) {
+                globalFailed = true
+                Log.w(TAG, "whole-phone mode unavailable: $t")
+                return
+            }
+        } else {
+            globalFx?.release()
+            globalFx = null
+            inGlobal = false
+            Log.i(TAG, "whole-phone mode off")
+        }
+        // App sessions switch between full chains and reverb-only.
+        val ids = effects.keys.toList()
+        ids.forEach { detach(it) }
+        failedAt.clear()
+        ids.forEach { attach(it) }
+    }
+
     private fun attach(session: Int) {
         if (session in effects) return
         val failed = failedAt[session]
         if (failed != null && SystemClock.elapsedRealtime() - failed < RETRY_MS) return
         try {
-            val fx = SessionFx(session)
+            val fx = SessionFx(session, full = !inGlobal)
             fx.apply(params())
             effects[session] = fx
             failedAt.remove(session)
@@ -196,6 +240,17 @@ object FxEngine {
             }
         }
         dead.forEach { detach(it); failedAt[it] = SystemClock.elapsedRealtime() }
+        globalFx?.let { g ->
+            try {
+                g.apply(p)
+            } catch (t: Throwable) {
+                Log.w(TAG, "whole-phone apply failed: $t")
+                g.release()
+                globalFx = null
+                inGlobal = false
+                globalFailed = true
+            }
+        }
         publish()
     }
 
@@ -281,7 +336,8 @@ object FxEngine {
         _status.value = Status(
             running = thread != null,
             sessions = effects.size,
-            catchAll = s.catchAll && SessionScanner.dumpGranted(app),
+            catchAll = s.catchAll && (inGlobal || SessionScanner.dumpGranted(app)),
+            global = inGlobal,
             note = note,
         )
     }

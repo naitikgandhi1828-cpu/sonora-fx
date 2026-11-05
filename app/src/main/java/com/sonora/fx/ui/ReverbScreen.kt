@@ -58,6 +58,7 @@ import kotlin.math.exp
 fun ReverbScreen(onBack: () -> Unit) {
     val s = FxApplication.settings
     val version by s.version.collectAsState()
+    val status by FxEngine.status.collectAsState()
 
     @Suppress("UNUSED_VARIABLE") val v = version
     val on = s.reverbOn
@@ -99,6 +100,15 @@ fun ReverbScreen(onBack: () -> Unit) {
                 ),
                 color = Sx.Sub, fontFamily = FontFamily.Monospace, fontSize = 15.sp,
             )
+        }
+
+        if (status.global) {
+            SxCard {
+                Footnote(
+                    "Whole-phone mode: reverb reaches apps that announce their sound (Spotify, Anghami and " +
+                        "most players). Android can't run reverb on the phone's whole output.",
+                )
+            }
         }
 
         SxCard {

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -41,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonora.fx.FxApplication
+import com.sonora.fx.engine.FxEngine
 import com.sonora.fx.engine.SessionScanner
 import com.sonora.fx.shizuku.ShizukuGrant
 import kotlinx.coroutines.Dispatchers
@@ -50,9 +52,9 @@ import kotlinx.coroutines.withContext
 private const val SHIZUKU_PKG = "moe.shizuku.privileged.api"
 
 /**
- * "Catch every app" — everything happens on the phone. The DUMP permission is
- * granted with one tap through Shizuku, and Shizuku itself is started with
- * Android's Wireless debugging (Android 11+), so no PC is ever needed.
+ * "Catch every app". Works with no setup: Sonora FX puts its effects on the
+ * phone's whole output. A precise per-app mode via Shizuku stays available as
+ * an option, for phones that allow it (many Xiaomi phones block the grant).
  */
 @Composable
 fun CatchAllScreen(refreshKey: Int, onRefresh: () -> Unit, onBack: () -> Unit) {
@@ -60,9 +62,11 @@ fun CatchAllScreen(refreshKey: Int, onRefresh: () -> Unit, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     val s = FxApplication.settings
     val version by s.version.collectAsState()
+    val status by FxEngine.status.collectAsState()
 
     var granted by remember { mutableStateOf(SessionScanner.dumpGranted(ctx)) }
-    var status by remember { mutableStateOf("") }
+    var result by remember { mutableStateOf("") }
+    var showPrecise by remember { mutableStateOf(false) }
     LaunchedEffect(refreshKey) { granted = SessionScanner.dumpGranted(ctx) }
 
     @Suppress("UNUSED_VARIABLE") val v = version
@@ -72,6 +76,7 @@ fun CatchAllScreen(refreshKey: Int, onRefresh: () -> Unit, onBack: () -> Unit) {
     val allowed = running && ShizukuGrant.hasPermission()
     val installed = isInstalled(ctx, SHIZUKU_PKG)
     val wireless = Build.VERSION.SDK_INT >= 30
+    val xiaomi = Build.MANUFACTURER.lowercase().let { it.contains("xiaomi") || it.contains("redmi") || it.contains("poco") }
 
     Screen("Catch every app", onBack) {
         SxCard {
@@ -81,96 +86,111 @@ fun CatchAllScreen(refreshKey: Int, onRefresh: () -> Unit, onBack: () -> Unit) {
                 Column(Modifier.weight(1f)) {
                     Text("Catch every app", color = Sx.Text, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        if (granted) (if (catchAll) "On" else "Off") else "Needs a one-time setup",
+                        when {
+                            !catchAll -> "Off"
+                            granted -> "On · precise mode"
+                            else -> "On · whole-phone mode"
+                        },
                         color = Sx.Sub, fontSize = 17.sp,
                     )
                 }
-                SxSwitch(catchAll && granted, enabled = granted) { s.catchAll = it }
+                SxSwitch(catchAll) { s.catchAll = it }
             }
             Footnote(
-                "Spotify, Anghami and most players announce their sound, so they work without this. " +
-                    "Catch every app also reaches YouTube Music, browsers, games and the rest.",
+                "Reaches YouTube Music, browsers, games and every app that doesn't announce its sound. " +
+                    "No PC, no permission, nothing to set up.",
                 Modifier.padding(top = 12.dp),
             )
         }
 
-        if (granted) {
-            SxCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.CheckCircle, null, tint = Sx.Accent, modifier = Modifier.size(26.dp))
-                    Spacer(Modifier.width(12.dp))
-                    Text("Permission given", color = Sx.Text, fontSize = 19.sp, fontWeight = FontWeight.Medium)
-                }
-                Footnote(
-                    "It stays until you uninstall Sonora FX, even after Shizuku stops or the phone restarts. " +
-                        "Nothing else to set up.",
-                    Modifier.padding(top = 8.dp),
-                )
-            }
-            return@Screen
+        status.note?.let { n ->
+            SxCard { Footnote(n) }
         }
 
-        // The one thing to do next, as a big button.
         SxCard {
-            CardLabel("Next step")
-            when {
-                allowed -> {
-                    Footnote("Shizuku is ready. One tap gives Sonora FX the permission.")
-                    Spacer(Modifier.size(12.dp))
-                    PillButton("Grant with Shizuku") {
-                        scope.launch {
-                            val r = withContext(Dispatchers.IO) { ShizukuGrant.grantDump(ctx.packageName) }
-                            status = r.fold({ "Done — checking…" }, { "Shizuku couldn't grant it: ${it.message}" })
-                            onRefresh()
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.CheckCircle, null, tint = Sx.Accent, modifier = Modifier.size(26.dp))
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    if (granted) "Precise mode" else "Whole-phone mode",
+                    color = Sx.Text, fontSize = 19.sp, fontWeight = FontWeight.Medium,
+                )
+            }
+            Footnote(
+                if (granted) {
+                    "Sonora FX finds each playing app and gives it the full effect chain, reverb included."
+                } else {
+                    "Sonora FX puts the equaliser, tone, pre-amp, limiter, bass distance and spatial on the " +
+                        "phone's whole output, so every app goes through them. Android only runs reverb on " +
+                        "apps that announce their sound (Spotify, Anghami and most players), so there it " +
+                        "applies to those."
+                },
+                Modifier.padding(top = 8.dp),
+            )
+        }
+
+        if (!granted) {
+            SxCard {
+                Row(
+                    Modifier.fillMaxWidth().clickable { showPrecise = !showPrecise },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Optional: precise mode", color = Sx.Text, fontSize = 19.sp, fontWeight = FontWeight.Medium)
+                        Text("Reverb on every app too. Needs Shizuku.", color = Sx.Sub, fontSize = 15.sp)
+                    }
+                    Text(if (showPrecise) "Hide" else "Show", color = Sx.Accent, fontSize = 16.sp)
+                }
+                if (showPrecise) {
+                    Spacer(Modifier.height(12.dp))
+                    if (xiaomi) {
+                        Footnote(
+                            "On Xiaomi, Redmi and POCO the phone blocks this grant (\"limited by the manufacturer\") " +
+                                "unless Developer options › \"USB debugging (Security settings)\" is on. That " +
+                                "switch needs a SIM card and a signed-in Xiaomi account. Whole-phone mode works " +
+                                "without any of this.",
+                            Modifier.padding(bottom = 12.dp),
+                        )
+                    }
+                    when {
+                        allowed -> PillButton("Grant with Shizuku") {
+                            scope.launch {
+                                val r = withContext(Dispatchers.IO) { ShizukuGrant.grantDump(ctx.packageName) }
+                                result = r.fold({ "Done — checking…" }, { "Shizuku couldn't grant it: ${it.message}" })
+                                onRefresh()
+                            }
                         }
+                        running -> PillButton("Allow Sonora FX in Shizuku") { ShizukuGrant.requestPermission() }
+                        installed -> PillButton("Open Shizuku") { openApp(ctx, SHIZUKU_PKG) }
+                        else -> PillButton("Get Shizuku") { getShizuku(ctx) }
+                    }
+                    if (result.isNotBlank()) Footnote(result, Modifier.padding(top = 10.dp))
+                    Spacer(Modifier.height(8.dp))
+                    if (!wireless) {
+                        Footnote("Starting Shizuku without a PC needs Android 11 or newer, or root.")
+                    } else {
+                        Step(1, "Get Shizuku (free) and open it.", if (installed) null else "Get Shizuku" to { getShizuku(ctx) }, done = installed)
+                        Step(
+                            2,
+                            "Turn on Developer options: in Settings › About phone, tap the version line " +
+                                "(\"OS version\" or \"Build number\") 7 times." +
+                                (if (xiaomi) " Then turn on \"USB debugging (Security settings)\"." else ""),
+                            "Open About phone" to { startSafely(ctx, Intent(Settings.ACTION_DEVICE_INFO_SETTINGS)) },
+                        )
+                        Step(
+                            3,
+                            "In Shizuku, tap \"Pairing\" under Start via Wireless debugging. Then in Developer " +
+                                "options › Wireless debugging, turn it on, tap \"Pair device with pairing code\", " +
+                                "and type the code into Shizuku's notification.",
+                            "Open Developer options" to { startSafely(ctx, Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)) },
+                        )
+                        Step(4, "Back in Shizuku, tap \"Start\".", if (installed) "Open Shizuku" to { openApp(ctx, SHIZUKU_PKG) } else null, done = running)
+                        Step(5, "Come back and tap the button above.", null, done = granted)
                     }
                 }
-                running -> {
-                    Footnote("Shizuku is running. Allow Sonora FX in Shizuku's prompt.")
-                    Spacer(Modifier.size(12.dp))
-                    PillButton("Allow Sonora FX in Shizuku") { ShizukuGrant.requestPermission() }
-                }
-                installed -> {
-                    Footnote("Shizuku is installed but not started. Start it with the steps below, then come back.")
-                    Spacer(Modifier.size(12.dp))
-                    PillButton("Open Shizuku") { openApp(ctx, SHIZUKU_PKG) }
-                }
-                else -> {
-                    Footnote("Get Shizuku, a free helper app. It gives Sonora FX the permission, all on this phone.")
-                    Spacer(Modifier.size(12.dp))
-                    PillButton("Get Shizuku") { getShizuku(ctx) }
-                }
-            }
-            if (status.isNotBlank()) Footnote(status, Modifier.padding(top = 10.dp))
-        }
-
-        SxCard {
-            CardLabel("Set up on this phone — no PC")
-            if (!wireless) {
-                Footnote(
-                    "This phone runs Android ${Build.VERSION.RELEASE}. Starting Shizuku without a PC needs " +
-                        "Android 11 or newer (Wireless debugging), or a rooted phone. Players that announce " +
-                        "their sound still work without this.",
-                )
-            } else {
-                Step(1, "Get Shizuku (free) and open it.", if (installed) null else "Get Shizuku" to { getShizuku(ctx) }, done = installed)
-                Step(
-                    2,
-                    "Turn on Developer options: in Settings › About phone, tap the version line " +
-                        "(\"OS version\" or \"Build number\") 7 times.",
-                    "Open About phone" to { startSafely(ctx, Intent(Settings.ACTION_DEVICE_INFO_SETTINGS)) },
-                )
-                Step(
-                    3,
-                    "In Shizuku, tap \"Pairing\" under Start via Wireless debugging. Then in Developer " +
-                        "options › Wireless debugging, turn it on, tap \"Pair device with pairing code\", " +
-                        "and type the code into Shizuku's notification.",
-                    "Open Developer options" to { startSafely(ctx, Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)) },
-                )
-                Step(4, "Back in Shizuku, tap \"Start\".", if (installed) "Open Shizuku" to { openApp(ctx, SHIZUKU_PKG) } else null, done = running)
-                Step(5, "Come back here and tap the button above. Done — it stays given for good.", null, done = granted)
             }
         }
+        Spacer(Modifier.height(16.dp))
     }
 }
 

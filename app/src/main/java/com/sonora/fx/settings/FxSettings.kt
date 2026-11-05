@@ -48,7 +48,7 @@ class FxSettings(context: Context) {
         set(v) = prefs.edit().putBoolean("fx.enabled", v).apply()
 
     var catchAll: Boolean
-        get() = prefs.getBoolean("fx.catchAll", false)
+        get() = prefs.getBoolean("fx.catchAll", true)
         set(v) = prefs.edit().putBoolean("fx.catchAll", v).apply()
 
     /** Output limiter (Stage 2 key; not in the original FX file). */

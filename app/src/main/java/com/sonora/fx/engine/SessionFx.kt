@@ -34,24 +34,40 @@ data class EngineParams(
  * The effect chain on one audio session: DynamicsProcessing with a pre-EQ
  * (EQ bands + tone shelves), input gain (preamp) and a limiter.
  */
-class SessionFx(val session: Int) {
+class SessionFx(val session: Int, val full: Boolean = true) {
 
-    private val dp: DynamicsProcessing
+    /**
+     * Null when [full] is false: in whole-phone mode the output mix (session 0)
+     * carries EQ, dynamics and spatial, and app sessions only get reverb, which
+     * Android can't run on the output mix.
+     */
+    private val dp: DynamicsProcessing?
 
     init {
-        val cfg = DynamicsProcessing.Config.Builder(
-            DynamicsProcessing.VARIANT_FAVOR_FREQUENCY_RESOLUTION,
-            CHANNELS,
-            /* preEqInUse = */ true, EqCurve.BANDS,
-            /* mbcInUse = */ true, 2,
-            /* postEqInUse = */ false, 0,
-            /* limiterInUse = */ true,
-        ).setPreferredFrameDuration(10f).build()
-        dp = DynamicsProcessing(PRIORITY, session, cfg)
+        dp = if (!full) null else {
+            val cfg = DynamicsProcessing.Config.Builder(
+                DynamicsProcessing.VARIANT_FAVOR_FREQUENCY_RESOLUTION,
+                CHANNELS,
+                /* preEqInUse = */ true, EqCurve.BANDS,
+                /* mbcInUse = */ true, 2,
+                /* postEqInUse = */ false, 0,
+                /* limiterInUse = */ true,
+            ).setPreferredFrameDuration(10f).build()
+            DynamicsProcessing(PRIORITY, session, cfg)
+        }
     }
 
     /** Applies [p]. Throws if the effect is no longer usable. */
     fun apply(p: EngineParams) {
+        val dp = dp
+        if (dp != null) applyDynamics(dp, p)
+        // Reverb is an insert on app sessions; on the output mix (0) Android
+        // makes it an auxiliary effect that players must opt into, so skip it there.
+        if (session != 0) applyReverb(p)
+        if (full) applyVirtualizer(p)
+    }
+
+    private fun applyDynamics(dp: DynamicsProcessing, p: EngineParams) {
         val eq = DynamicsProcessing.Eq(true, p.active && p.eqInUse, EqCurve.BANDS)
         for (i in 0 until EqCurve.BANDS) {
             eq.setBand(i, DynamicsProcessing.EqBand(true, EqCurve.cutoffs[i], p.eqGains[i]))
@@ -81,9 +97,6 @@ class SessionFx(val session: Int) {
             )
         )
         dp.enabled = p.active
-
-        applyReverb(p)
-        applyVirtualizer(p)
     }
 
     private var env: EnvironmentalReverb? = null
@@ -150,8 +163,7 @@ class SessionFx(val session: Int) {
     fun release() {
         listOfNotNull(env, preset, virt).forEach { fx -> runCatching { fx.enabled = false; fx.release() } }
         env = null; preset = null; virt = null
-        runCatching { dp.enabled = false }
-        runCatching { dp.release() }
+        dp?.let { runCatching { it.enabled = false }; runCatching { it.release() } }
     }
 
     companion object {
