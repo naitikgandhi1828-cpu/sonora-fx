@@ -9,7 +9,7 @@ import java.io.File
 
 /**
  * "Catch Every App": finds the audio sessions of everything playing, using
- * the DUMP permission (granted once via Shizuku, on the phone).
+ * the DUMP permission, if the phone has granted it.
  *
  * Reads the audio service's dump, whose "playback activity" section lists
  * one AudioPlaybackConfiguration per player with its uid, state and session

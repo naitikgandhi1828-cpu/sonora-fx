@@ -17,8 +17,8 @@ android {
         applicationId = "com.sonora.fx.dev"
         minSdk = 29
         targetSdk = 34
-        versionCode = 6
-        versionName = "2.0-dev6"
+        versionCode = 7
+        versionName = "2.0-dev7"
     }
 
     // Same key as the original FX, kept in the repo so Google sign-in and
@@ -80,8 +80,4 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
-
-    // Shizuku: one-tap permission grant for "Catch Every App".
-    implementation("dev.rikka.shizuku:api:13.1.5")
-    implementation("dev.rikka.shizuku:provider:13.1.5")
 }

@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
  *       mix (session 0), so every app is covered. App sessions then only get
  *       reverb, which can't run on the output mix.
  *     - precise mode: [SessionScanner] polling the audio dump, when the DUMP
- *       permission was granted (Shizuku). Some phones (e.g. Xiaomi) block that.
+ *       permission is granted (not requested by the app).
  *
  * All effect work happens on one background thread.
  */

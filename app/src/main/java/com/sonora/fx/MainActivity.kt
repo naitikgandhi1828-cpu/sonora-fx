@@ -23,17 +23,11 @@ import com.sonora.fx.ui.LogScreen
 import com.sonora.fx.ui.ReverbScreen
 import com.sonora.fx.ui.SpatialScreen
 import com.sonora.fx.ui.SonoraFxTheme
-import rikka.shizuku.Shizuku
 
 class MainActivity : ComponentActivity() {
 
-    // Recomposition trigger: bumped whenever Shizuku/permission state changes.
+    // Bumped on resume, so screens re-check things changed in Settings.
     private var tick by mutableStateOf(0)
-
-    private val permissionListener =
-        Shizuku.OnRequestPermissionResultListener { _, _ -> tick++ }
-    private val binderReceived = Shizuku.OnBinderReceivedListener { tick++ }
-    private val binderDead = Shizuku.OnBinderDeadListener { tick++ }
 
     private val notifPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
@@ -44,11 +38,6 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
-        runCatching {
-            Shizuku.addRequestPermissionResultListener(permissionListener)
-            Shizuku.addBinderReceivedListenerSticky(binderReceived)
-            Shizuku.addBinderDeadListener(binderDead)
-        }
         if (Build.VERSION.SDK_INT >= 33) {
             notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
@@ -62,7 +51,7 @@ class MainActivity : ComponentActivity() {
                     "eq" -> EqualiserScreen(onBack = back)
                     "reverb" -> ReverbScreen(onBack = back)
                     "spatial" -> SpatialScreen(onBack = back)
-                    "catch" -> CatchAllScreen(refreshKey = tick, onRefresh = { tick++ }, onBack = back)
+                    "catch" -> CatchAllScreen(onBack = back)
                     "keep" -> KeepRunningScreen(refreshKey = tick, onBack = back)
                     "log" -> LogScreen(onBack = back)
                     else -> HomeScreen(go = { route = it })
@@ -73,15 +62,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        tick++ // re-check permissions when returning from Shizuku or Settings
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        runCatching {
-            Shizuku.removeRequestPermissionResultListener(permissionListener)
-            Shizuku.removeBinderReceivedListener(binderReceived)
-            Shizuku.removeBinderDeadListener(binderDead)
-        }
+        tick++ // re-check battery settings when coming back from Settings
     }
 }

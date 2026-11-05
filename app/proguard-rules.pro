@@ -4,8 +4,3 @@
 -dontwarn org.bouncycastle.**
 -dontwarn org.conscrypt.**
 -dontwarn org.openjsse.**
-
-# Shizuku
--keep class rikka.shizuku.** { *; }
--keep class moe.shizuku.** { *; }
--dontwarn rikka.shizuku.**

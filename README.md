@@ -1,7 +1,7 @@
 # Sonora FX — source rebuild
 
 Rebuilding Sonora FX from scratch as a real Kotlin/Compose project, so it owns
-its source again and can take proper features like one-tap Shizuku setup.
+its source again. It is one self-contained app: nothing else to install.
 
 ## How it builds
 
@@ -27,10 +27,9 @@ original with the same signing key.
 
 - **Stage 1 (this):** project scaffold + build pipeline, the equalizer data
   model and settings, **separate EQ per device**, and a friendly **Catch Every
-  App** screen with one-tap **Shizuku** grant and a short manual fallback.
+  App** that works with no setup (effects on the phone's whole output).
   Goal: it compiles, installs, and the catch-all setup is painless.
-  Everything is done on the phone: Shizuku is started with Wireless
-  debugging (Android 11+), so no PC is ever needed.
+  No PC, no helper apps, no special permission.
 - **Stage 2:** port the audio engine — the background service that attaches
   effects to other apps' sessions, and the EQ/preamp/tone/limiter application.
 - **Stage 3:** reverb and spatial, then the full Compose UI (home, EQ screen
@@ -43,11 +42,10 @@ original with the same signing key.
 ```
 app/src/main/java/com/sonora/fx/
   FxApplication.kt          app entry; starts per-device EQ
-  MainActivity.kt           Compose host + Shizuku listeners
+  MainActivity.kt           Compose host + navigation
   settings/Eq.kt            EQ band + preset model
   settings/FxSettings.kt    SharedPreferences store (same keys as original FX)
   perdevice/PerDeviceEq.kt  separate EQ per output device
-  shizuku/ShizukuGrant.kt   one-tap DUMP grant via Shizuku
   engine/FxEngine.kt        audio engine: tracks sessions, applies settings
   engine/SessionFx.kt       DynamicsProcessing chain per session (EQ, preamp, limiter)
   engine/EqCurve.kt         parametric bands + tone shelves -> 32-band graphic EQ gains
@@ -59,7 +57,7 @@ app/src/main/java/com/sonora/fx/
   ui/Components.kt          cards, rows, sliders, vertical EQ faders
   ui/HomeScreen.kt          power card, Apps / Effects / More apps / How it works
   ui/EqualiserScreen.kt     curve, 10 faders, Tone, Pre-amp, auto pre-amp, limiter
-  ui/CatchAllScreen.kt      Catch every app: on-phone Shizuku setup (no PC)
+  ui/CatchAllScreen.kt      Catch every app (whole-phone mode, no setup)
   ui/KeepRunningScreen.kt   battery saver / autostart help
   ui/LogScreen.kt           view, share and copy the log
 ```
